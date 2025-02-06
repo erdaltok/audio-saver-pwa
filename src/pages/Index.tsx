@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { Loader2, Trash2, Upload, Mic, Square } from "lucide-react";
+import { Loader2, Trash2, Upload, Mic, Square, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const N8N_WEBHOOK_URL = 'https://my-n8n-instance.com/webhook/1234';
@@ -18,9 +18,11 @@ const Index = () => {
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [isUploading, setIsUploading] = useState<string | null>(null);
+  const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
   const durationInterval = useRef<number>();
+  const audioPlayer = useRef<HTMLAudioElement | null>(null);
   const { toast } = useToast();
 
   // Initialize IndexedDB
@@ -67,15 +69,17 @@ const Index = () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorder.current = new MediaRecorder(stream, {
-        mimeType: 'audio/webm'  // Changed from audio/ogg to audio/webm
+        mimeType: 'audio/webm'
       });
 
       mediaRecorder.current.ondataavailable = (e) => {
-        chunks.current.push(e.data);
+        if (e.data.size > 0) {
+          chunks.current.push(e.data);
+        }
       };
 
       mediaRecorder.current.onstop = () => {
-        const blob = new Blob(chunks.current, { type: 'audio/webm' });  // Changed from audio/ogg to audio/webm
+        const blob = new Blob(chunks.current, { type: 'audio/webm' });
         const recording: Recording = {
           id: Date.now().toString(),
           blob,
@@ -97,8 +101,11 @@ const Index = () => {
         setRecordingDuration(0);
       };
 
-      mediaRecorder.current.start();
+      mediaRecorder.current.start(200); // Start recording and get data every 200ms
       setIsRecording(true);
+      
+      // Start duration counter
+      setRecordingDuration(0);
       durationInterval.current = window.setInterval(() => {
         setRecordingDuration(prev => prev + 1);
       }, 1000);
@@ -121,7 +128,6 @@ const Index = () => {
     }
   };
 
-  // Delete recording
   const deleteRecording = (id: string) => {
     const request = indexedDB.open('audioDB', 1);
     request.onsuccess = () => {
@@ -137,11 +143,10 @@ const Index = () => {
     };
   };
 
-  // Upload recording to n8n
   const uploadRecording = async (recording: Recording) => {
     setIsUploading(recording.id);
     const formData = new FormData();
-    formData.append('file', recording.blob, `recording-${recording.id}.ogg`);
+    formData.append('file', recording.blob, `recording-${recording.id}.webm`);
 
     try {
       const response = await fetch(N8N_WEBHOOK_URL, {
@@ -167,14 +172,32 @@ const Index = () => {
     }
   };
 
-  // Format duration in MM:SS
+  const playRecording = (recording: Recording) => {
+    if (currentlyPlaying === recording.id) {
+      audioPlayer.current?.pause();
+      setCurrentlyPlaying(null);
+      return;
+    }
+
+    const url = URL.createObjectURL(recording.blob);
+    if (audioPlayer.current) {
+      audioPlayer.current.src = url;
+      audioPlayer.current.play();
+      setCurrentlyPlaying(recording.id);
+      
+      audioPlayer.current.onended = () => {
+        setCurrentlyPlaying(null);
+        URL.revokeObjectURL(url);
+      };
+    }
+  };
+
   const formatDuration = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
-  // Format date
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleString();
   };
@@ -201,6 +224,8 @@ const Index = () => {
           </div>
         )}
       </div>
+
+      <audio ref={audioPlayer} className="hidden" />
 
       <div className="space-y-4">
         {recordings.map((recording) => (
@@ -233,6 +258,16 @@ const Index = () => {
                 ) : (
                   <Upload className="w-4 h-4" />
                 )}
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => playRecording(recording)}
+                className={cn(
+                  currentlyPlaying === recording.id && "bg-indigo-100 dark:bg-indigo-900"
+                )}
+              >
+                <Play className="w-4 h-4" />
               </Button>
             </div>
           </div>
