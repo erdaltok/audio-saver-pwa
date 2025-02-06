@@ -71,7 +71,7 @@ const Index = () => {
       const audioConstraints = {
         echoCancellation: true,  // Reduces echo in the recording
         noiseSuppression: true,  // Reduces background noise
-        autoGainControl: false,  // Prevents automatic volume adjustment
+        autoGainControl: true,   // Enables automatic volume adjustment
         sampleRate: 44100,      // CD-quality sample rate
         channelCount: 2         // Stereo recording
       };
