@@ -67,9 +67,27 @@ const Index = () => {
 
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Advanced audio constraints for better quality
+      const audioConstraints = {
+        echoCancellation: true,  // Reduces echo in the recording
+        noiseSuppression: true,  // Reduces background noise
+        autoGainControl: false,  // Prevents automatic volume adjustment
+        sampleRate: 44100,      // CD-quality sample rate
+        channelCount: 2         // Stereo recording
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: audioConstraints
+      });
+
+      // Try to use Opus codec first, fall back to standard WebM if not supported
+      let mimeType = 'audio/webm;codecs=opus';
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = 'audio/webm';
+      }
+
       mediaRecorder.current = new MediaRecorder(stream, {
-        mimeType: 'audio/webm'
+        mimeType: mimeType
       });
 
       mediaRecorder.current.ondataavailable = (e) => {
@@ -80,7 +98,7 @@ const Index = () => {
 
       mediaRecorder.current.onstop = () => {
         const actualDuration = Math.floor((Date.now() - startTime.current) / 1000);
-        const blob = new Blob(chunks.current, { type: 'audio/webm' });
+        const blob = new Blob(chunks.current, { type: mimeType });
         const recording: Recording = {
           id: Date.now().toString(),
           blob,
