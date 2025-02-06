@@ -4,7 +4,6 @@ import { useToast } from "@/components/ui/use-toast";
 import { Loader2, Trash2, Upload, Mic, Square } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Placeholder for n8n webhook URL - replace with your actual URL
 const N8N_WEBHOOK_URL = 'https://my-n8n-instance.com/webhook/1234';
 
 interface Recording {
@@ -64,12 +63,11 @@ const Index = () => {
     };
   };
 
-  // Start recording
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorder.current = new MediaRecorder(stream, {
-        mimeType: 'audio/ogg;codecs=opus'
+        mimeType: 'audio/webm'  // Changed from audio/ogg to audio/webm
       });
 
       mediaRecorder.current.ondataavailable = (e) => {
@@ -77,7 +75,7 @@ const Index = () => {
       };
 
       mediaRecorder.current.onstop = () => {
-        const blob = new Blob(chunks.current, { type: 'audio/ogg;codecs=opus' });
+        const blob = new Blob(chunks.current, { type: 'audio/webm' });  // Changed from audio/ogg to audio/webm
         const recording: Recording = {
           id: Date.now().toString(),
           blob,
@@ -114,7 +112,6 @@ const Index = () => {
     }
   };
 
-  // Stop recording
   const stopRecording = () => {
     if (mediaRecorder.current && mediaRecorder.current.state !== 'inactive') {
       mediaRecorder.current.stop();
