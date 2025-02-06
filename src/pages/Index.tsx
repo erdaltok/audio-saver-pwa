@@ -22,6 +22,7 @@ const Index = () => {
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
   const durationInterval = useRef<number>();
+  const startTime = useRef<number>(0);
   const audioPlayer = useRef<HTMLAudioElement | null>(null);
   const { toast } = useToast();
 
@@ -50,7 +51,6 @@ const Index = () => {
     };
   }, []);
 
-  // Load recordings from IndexedDB
   const loadRecordings = () => {
     const request = indexedDB.open('audioDB', 1);
     request.onsuccess = () => {
@@ -79,11 +79,12 @@ const Index = () => {
       };
 
       mediaRecorder.current.onstop = () => {
+        const actualDuration = Math.floor((Date.now() - startTime.current) / 1000);
         const blob = new Blob(chunks.current, { type: 'audio/webm' });
         const recording: Recording = {
           id: Date.now().toString(),
           blob,
-          duration: recordingDuration,
+          duration: actualDuration,
           timestamp: Date.now(),
         };
 
@@ -101,13 +102,15 @@ const Index = () => {
         setRecordingDuration(0);
       };
 
-      mediaRecorder.current.start(200); // Start recording and get data every 200ms
+      startTime.current = Date.now();
+      mediaRecorder.current.start(200);
       setIsRecording(true);
       
       // Start duration counter
       setRecordingDuration(0);
       durationInterval.current = window.setInterval(() => {
-        setRecordingDuration(prev => prev + 1);
+        const currentDuration = Math.floor((Date.now() - startTime.current) / 1000);
+        setRecordingDuration(currentDuration);
       }, 1000);
     } catch (error) {
       console.error('Error accessing microphone:', error);
