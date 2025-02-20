@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { Loader2, Trash2, Upload, Mic, Square, Play, X } from "lucide-react";
@@ -10,7 +10,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-const N8N_WEBHOOK_URL = 'https://digiventus.app.n8n.cloud/webhook/17a25868-119f-44a8-b5c6-ba3faad36bd5';
+const N8N_WEBHOOK_URL =
+  "https://digiventus.app.n8n.cloud/webhook/17a25868-119f-44a8-b5c6-ba3faad36bd5";
 
 interface Recording {
   id: string;
@@ -26,7 +27,9 @@ const Index = () => {
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [isUploading, setIsUploading] = useState<string | null>(null);
   const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null);
-  const [selectedRecording, setSelectedRecording] = useState<Recording | null>(null);
+  const [selectedRecording, setSelectedRecording] = useState<Recording | null>(
+    null
+  );
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
   const durationInterval = useRef<number>();
@@ -36,7 +39,7 @@ const Index = () => {
 
   // Initialize IndexedDB
   useEffect(() => {
-    const request = indexedDB.open('audioDB', 1);
+    const request = indexedDB.open("audioDB", 1);
 
     request.onerror = () => {
       console.error("Error opening IndexedDB");
@@ -49,8 +52,8 @@ const Index = () => {
 
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result;
-      if (!db.objectStoreNames.contains('recordings')) {
-        db.createObjectStore('recordings', { keyPath: 'id' });
+      if (!db.objectStoreNames.contains("recordings")) {
+        db.createObjectStore("recordings", { keyPath: "id" });
       }
     };
 
@@ -60,11 +63,11 @@ const Index = () => {
   }, []);
 
   const loadRecordings = () => {
-    const request = indexedDB.open('audioDB', 1);
+    const request = indexedDB.open("audioDB", 1);
     request.onsuccess = () => {
       const db = request.result;
-      const transaction = db.transaction(['recordings'], 'readonly');
-      const store = transaction.objectStore('recordings');
+      const transaction = db.transaction(["recordings"], "readonly");
+      const store = transaction.objectStore("recordings");
       const getAllRequest = store.getAll();
 
       getAllRequest.onsuccess = () => {
@@ -77,25 +80,25 @@ const Index = () => {
     try {
       // Advanced audio constraints for better quality
       const audioConstraints = {
-        echoCancellation: true,  // Reduces echo in the recording
-        noiseSuppression: true,  // Reduces background noise
-        autoGainControl: true,   // Enables automatic volume adjustment
-        sampleRate: 44100,      // CD-quality sample rate
-        channelCount: 2         // Stereo recording
+        echoCancellation: true, // Reduces echo in the recording
+        noiseSuppression: true, // Reduces background noise
+        autoGainControl: true, // Enables automatic volume adjustment
+        sampleRate: 44100, // CD-quality sample rate
+        channelCount: 2, // Stereo recording
       };
 
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: audioConstraints
+        audio: audioConstraints,
       });
 
       // Try to use Opus codec first, fall back to standard WebM if not supported
-      let mimeType = 'audio/webm;codecs=opus';
+      let mimeType = "audio/webm;codecs=opus";
       if (!MediaRecorder.isTypeSupported(mimeType)) {
-        mimeType = 'audio/webm';
+        mimeType = "audio/webm";
       }
 
       mediaRecorder.current = new MediaRecorder(stream, {
-        mimeType: mimeType
+        mimeType: mimeType,
       });
 
       mediaRecorder.current.ondataavailable = (e) => {
@@ -105,7 +108,9 @@ const Index = () => {
       };
 
       mediaRecorder.current.onstop = () => {
-        const actualDuration = Math.floor((Date.now() - startTime.current) / 1000);
+        const actualDuration = Math.floor(
+          (Date.now() - startTime.current) / 1000
+        );
         const blob = new Blob(chunks.current, { type: mimeType });
         const recording: Recording = {
           id: Date.now().toString(),
@@ -115,11 +120,11 @@ const Index = () => {
         };
 
         // Save to IndexedDB
-        const request = indexedDB.open('audioDB', 1);
+        const request = indexedDB.open("audioDB", 1);
         request.onsuccess = () => {
           const db = request.result;
-          const transaction = db.transaction(['recordings'], 'readwrite');
-          const store = transaction.objectStore('recordings');
+          const transaction = db.transaction(["recordings"], "readwrite");
+          const store = transaction.objectStore("recordings");
           store.add(recording);
           loadRecordings();
         };
@@ -131,15 +136,17 @@ const Index = () => {
       startTime.current = Date.now();
       mediaRecorder.current.start(200);
       setIsRecording(true);
-      
+
       // Start duration counter
       setRecordingDuration(0);
       durationInterval.current = window.setInterval(() => {
-        const currentDuration = Math.floor((Date.now() - startTime.current) / 1000);
+        const currentDuration = Math.floor(
+          (Date.now() - startTime.current) / 1000
+        );
         setRecordingDuration(currentDuration);
       }, 1000);
     } catch (error) {
-      console.error('Error accessing microphone:', error);
+      console.error("Error accessing microphone:", error);
       toast({
         title: "Error",
         description: "Could not access microphone",
@@ -149,20 +156,20 @@ const Index = () => {
   };
 
   const stopRecording = () => {
-    if (mediaRecorder.current && mediaRecorder.current.state !== 'inactive') {
+    if (mediaRecorder.current && mediaRecorder.current.state !== "inactive") {
       mediaRecorder.current.stop();
-      mediaRecorder.current.stream.getTracks().forEach(track => track.stop());
+      mediaRecorder.current.stream.getTracks().forEach((track) => track.stop());
       clearInterval(durationInterval.current);
       setIsRecording(false);
     }
   };
 
   const deleteRecording = (id: string) => {
-    const request = indexedDB.open('audioDB', 1);
+    const request = indexedDB.open("audioDB", 1);
     request.onsuccess = () => {
       const db = request.result;
-      const transaction = db.transaction(['recordings'], 'readwrite');
-      const store = transaction.objectStore('recordings');
+      const transaction = db.transaction(["recordings"], "readwrite");
+      const store = transaction.objectStore("recordings");
       store.delete(id);
       loadRecordings();
       toast({
@@ -175,27 +182,27 @@ const Index = () => {
   const uploadRecording = async (recording: Recording) => {
     setIsUploading(recording.id);
     const formData = new FormData();
-    formData.append('file', recording.blob, `recording-${recording.id}.webm`);
+    formData.append("file", recording.blob, `recording-${recording.id}.webm`);
 
     try {
       const response = await fetch(N8N_WEBHOOK_URL, {
-        method: 'POST',
+        method: "POST",
         body: formData,
       });
 
-      if (!response.ok) throw new Error('Upload failed');
+      if (!response.ok) throw new Error("Upload failed");
 
       const data = await response.json();
-      
+
       // Update the recording with the transcription
       const updatedRecording = { ...recording, transcription: data.text };
-      
+
       // Update in IndexedDB
-      const request = indexedDB.open('audioDB', 1);
+      const request = indexedDB.open("audioDB", 1);
       request.onsuccess = () => {
         const db = request.result;
-        const transaction = db.transaction(['recordings'], 'readwrite');
-        const store = transaction.objectStore('recordings');
+        const transaction = db.transaction(["recordings"], "readwrite");
+        const store = transaction.objectStore("recordings");
         store.put(updatedRecording);
         loadRecordings();
       };
@@ -205,7 +212,7 @@ const Index = () => {
         description: "Recording uploaded and transcribed successfully",
       });
     } catch (error) {
-      console.error('Upload error:', error);
+      console.error("Upload error:", error);
       toast({
         title: "Error",
         description: "Failed to upload recording",
@@ -232,7 +239,7 @@ const Index = () => {
       audioPlayer.current.src = url;
       audioPlayer.current.play();
       setCurrentlyPlaying(recording.id);
-      
+
       audioPlayer.current.onended = () => {
         setCurrentlyPlaying(null);
         URL.revokeObjectURL(url);
@@ -243,7 +250,7 @@ const Index = () => {
   const formatDuration = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
   };
 
   const formatDate = (timestamp: number) => {
@@ -257,7 +264,9 @@ const Index = () => {
           onClick={isRecording ? stopRecording : startRecording}
           className={cn(
             "w-32 h-32 rounded-full transition-all duration-300",
-            isRecording ? "bg-red-500 hover:bg-red-600" : "bg-indigo-600 hover:bg-indigo-700"
+            isRecording
+              ? "bg-red-500 hover:bg-red-600"
+              : "bg-indigo-600 hover:bg-indigo-700"
           )}
         >
           {isRecording ? (
@@ -282,7 +291,9 @@ const Index = () => {
             className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow flex items-center justify-between"
           >
             <div>
-              <div className="font-medium">{formatDate(recording.timestamp)}</div>
+              <div className="font-medium">
+                {formatDate(recording.timestamp)}
+              </div>
               <div className="text-sm text-gray-500">
                 Duration: {formatDuration(recording.duration)}
               </div>
@@ -312,7 +323,8 @@ const Index = () => {
                 size="icon"
                 onClick={() => playRecording(recording)}
                 className={cn(
-                  currentlyPlaying === recording.id && "bg-indigo-100 dark:bg-indigo-900"
+                  currentlyPlaying === recording.id &&
+                    "bg-indigo-100 dark:bg-indigo-900"
                 )}
               >
                 <Play className="w-4 h-4" />
@@ -330,7 +342,10 @@ const Index = () => {
         ))}
       </div>
 
-      <Dialog open={selectedRecording !== null} onOpenChange={() => setSelectedRecording(null)}>
+      <Dialog
+        open={selectedRecording !== null}
+        onOpenChange={() => setSelectedRecording(null)}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex justify-between items-center">
@@ -340,9 +355,7 @@ const Index = () => {
                 size="icon"
                 onClick={() => setSelectedRecording(null)}
                 className="h-8 w-8 p-0"
-              >
-                <X className="h-4 w-4" />
-              </Button>
+              ></Button>
             </DialogTitle>
           </DialogHeader>
           <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
