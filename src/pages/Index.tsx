@@ -1,8 +1,14 @@
 import { useEffect, useState, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { Loader2, Trash2, Upload, Mic, Square, Play } from "lucide-react";
+import { Loader2, Trash2, Upload, Mic, Square, Play, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const N8N_WEBHOOK_URL = 'https://digiventus.app.n8n.cloud/webhook/17a25868-119f-44a8-b5c6-ba3faad36bd5';
 
@@ -11,6 +17,7 @@ interface Recording {
   blob: Blob;
   duration: number;
   timestamp: number;
+  transcription?: string;
 }
 
 const Index = () => {
@@ -19,6 +26,7 @@ const Index = () => {
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [isUploading, setIsUploading] = useState<string | null>(null);
   const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null);
+  const [selectedRecording, setSelectedRecording] = useState<Recording | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
   const durationInterval = useRef<number>();
@@ -177,9 +185,24 @@ const Index = () => {
 
       if (!response.ok) throw new Error('Upload failed');
 
+      const data = await response.json();
+      
+      // Update the recording with the transcription
+      const updatedRecording = { ...recording, transcription: data.text };
+      
+      // Update in IndexedDB
+      const request = indexedDB.open('audioDB', 1);
+      request.onsuccess = () => {
+        const db = request.result;
+        const transaction = db.transaction(['recordings'], 'readwrite');
+        const store = transaction.objectStore('recordings');
+        store.put(updatedRecording);
+        loadRecordings();
+      };
+
       toast({
         title: "Success",
-        description: "Recording uploaded successfully",
+        description: "Recording uploaded and transcribed successfully",
       });
     } catch (error) {
       console.error('Upload error:', error);
@@ -191,6 +214,10 @@ const Index = () => {
     } finally {
       setIsUploading(null);
     }
+  };
+
+  const showTranscription = (recording: Recording) => {
+    setSelectedRecording(recording);
   };
 
   const playRecording = (recording: Recording) => {
@@ -290,10 +317,41 @@ const Index = () => {
               >
                 <Play className="w-4 h-4" />
               </Button>
+              {recording.transcription && (
+                <Button
+                  variant="outline"
+                  onClick={() => showTranscription(recording)}
+                >
+                  Show Text
+                </Button>
+              )}
             </div>
           </div>
         ))}
       </div>
+
+      <Dialog open={selectedRecording !== null} onOpenChange={() => setSelectedRecording(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex justify-between items-center">
+              <span>Transcription</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSelectedRecording(null)}
+                className="h-8 w-8 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+            <p className="text-lg leading-relaxed">
+              {selectedRecording?.transcription}
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
