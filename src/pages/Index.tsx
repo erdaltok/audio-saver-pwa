@@ -4,7 +4,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Loader2, Trash2, Upload, Mic, Square, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const N8N_WEBHOOK_URL = 'https://my-n8n-instance.com/webhook/1234';
+const N8N_WEBHOOK_URL = 'https://digiventus.app.n8n.cloud/webhook-test/17a25868-119f-44a8-b5c6-ba3faad36bd5';
 
 interface Recording {
   id: string;
